@@ -38,11 +38,11 @@ void loop() {
   if (distance <= 30) {
     check = check + 1;
     Serial.println(check);
-    if (distance <= 5 || check >= 100) {
+    if (distance <= 5 || check >= 50) {
       locked = 1;
       Serial.println("Wheelchair Locked. Create distance.");
       digitalWrite(LEDPin, HIGH);
-  }
+    }
   }
 
   if (distance >= 35 && locked == 1) {
