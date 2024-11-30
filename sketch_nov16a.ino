@@ -1,17 +1,15 @@
-#include <HttpClient.h>
-#include <b64.h>
+#include <HTTPClient.h>
 #include <WiFi.h>
 #include <WiFiClient.h>
 
 // defines pins numbers
 // trigger pin for all ultrasounds are the same
-const int trigPin = 9;
-
+const int trigPin = 27;
 // echo or input pin for all ultrasounds are different and they matter
-const int echo1Pin = 10;
-const int echo2Pin = 11;
-const int echo3Pin = 12;
-const int echo4Pin = 13;
+const int echo1Pin = 13;
+const int echo2Pin = 15;
+const int echo3Pin = 16;
+const int echo4Pin = 17;
 
 // set all ultrasound positions in 90 degree intervals, starting with 45
 const int echo1Pos = 45;
@@ -20,7 +18,7 @@ const int echo3Pos = 225;
 const int echo4Pos = 315;
 
 // simulate wheelchair locking
-const int LEDPin = 7;
+// const int LEDPin = 7;
 
 // defines variables
 long duration1;
@@ -36,7 +34,7 @@ int distance4;
 int check = 0;
 bool locked;
 bool speed;
-long time;
+long time_now;
 long time_next;
 
 String echoType = "ultrasound";
@@ -56,11 +54,11 @@ void setup() {
   pinMode(echo2Pin, INPUT);
   pinMode(echo3Pin, INPUT);
   pinMode(echo4Pin, INPUT);
-  pinMode(LEDPin, OUTPUT);
-  digitalWrite(LEDPin, LOW);
-  Serial.begin(9600); // Starts the serial communication
+//  pinMode(LEDPin, OUTPUT);
+//  digitalWrite(LEDPin, LOW);
+  Serial.begin(115200); // Starts the serial communication
   delay(500);
-  time = millis();
+  time_now = millis();
 }
 
 void loop() {
@@ -88,29 +86,39 @@ void loop() {
 
   //String data = "{\"timestamp\": " + String(millis()) + ", \"data\": {\"frequency\": " + String(storedFrequency) + " , \"fall_detection\" : " + String(fallDetected) + "}}"; sendDataToServer(data);
 
-  String data = "{\"arbitrary_key1\": [" + echoType + time + echo1Pin + distance1 + "], " + "arbitrary_key2: [" + echoType + time + echo2Pin + distance2 + "], " +
-  "arbitrary_key3: [" + echoType + time + echo3Pin + distance3 + "], " + "arbitrary_key4: [" + echoType + time + echo4Pin + distance4 + "] " + "\}";
+  String data = "{\"arbitrary_key1\": [" + String(echoType) + String(time_now) + String(echo1Pin) + String(distance1) + "], " + "arbitrary_key2: [" + String(echoType) + String(time_now) + String(echo2Pin) + String(distance2) + "], " +
+  "arbitrary_key3: [" + String(echoType) + String(time_now) + String(echo3Pin) + String(distance3) + "], " + "arbitrary_key4: [" + String(echoType) + String(time_now) + String(echo4Pin) + String(distance4) + "] " + "\}";  
   
-  // if (distance <= 30) {
-  //   check = check + 1;
-  // }
-  // if (distance <= 5 || check >= 50) {
-  //   locked = 1;
-  //   Serial.println("Wheelchair Locked. Create distance.");
-  //   digitalWrite(LEDPin, HIGH);
-  // }
-
-  // if (distance >= 35 && locked == 1) {
-  //   locked = 0;
-  //   check = 0;
-  //   Serial.println("Wheelchair Unlocked.");
-  //   Serial.println(locked);
-  //   digitalWrite(LEDPin, LOW);
-  // }
-
-  // time_next = millis();
-  // if (time_next - time > 1000) {
-  //   time = millis();
-  //   // return 
-  // }
+  sendDataToServer(data);
 }
+
+void sendDataToServer(String data)
+{
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        HTTPClient http;
+        http.setReuse(true);
+        http.begin("https://192.168.0.104:8080/api/v1/sensors-data");
+        http.addHeader("Content-Type", "application/json");
+
+        int httpResponseCode = http.POST(data);
+
+        if (httpResponseCode > 0)
+        {
+            String response = http.getString();
+            Serial.println(httpResponseCode);
+            Serial.println(response);
+        }
+        else
+        {
+            Serial.print("Error on sending POST: ");
+            Serial.println(httpResponseCode);
+        }
+        http.end();
+    }
+    else
+    {
+        Serial.println("Error in WiFi connection");
+    }
+}
+
